@@ -1,11 +1,10 @@
-let spaceValue = false;
+let spaceValue;
 let firstaids;
 let spacefield;
 let trees;
 let bird;
-let updateInterval = 0;
 let scoreText;
-let score = 0;
+let score;
 let weapon;
 let cannonball;
 let apples;
@@ -14,8 +13,8 @@ let grapes;
 let pears;
 let keys;
 let memory;
-let lastNumber = 0;
-
+let progress;
+let loadingWidth;
 
 
 let Game = {
@@ -61,10 +60,7 @@ let Game = {
         bird.body.collideWorldBounds = true;
         bird.addChild(letter);
 
-        
-
         firstaids = game.add.group();
-
         apples = game.add.group();
         pears = game.add.group();
         plums = game.add.group();
@@ -109,11 +105,26 @@ let Game = {
         cursors = game.input.keyboard.createCursorKeys();
         cursors.space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
-        scoreText = game.add.text(1200 - 200, 20, 'score: 0', {
+        // add progress bar
+        progress = game.add.graphics(0, 0);
+        progress.lineStyle(4, '0x00ff06');
+        progress.drawRoundedRect(game.world.width - 330, 30, 300, 30, 9);
+        loadingWidth = 296;
+
+        progress.lineStyle(0);
+        progress.beginFill('0xf6ff00');
+        progress.drawRoundedRect(game.world.width - 328, 32, loadingWidth, 26, 9);
+        progress.endFill();
+
+        game.time.events.repeat(Phaser.Timer.SECOND * 0.5, 300, this.loadProgress, this);
+
+        scoreText = game.add.text(game.world.width - 230, 80, 'score: 0', {
             font: '40px Helvetica',
             fill: 'red'
         });
 
+        spaceValue = false;
+        score = 0;
         // game.time.events.add(Phaser.Timer.SECOND * 10, this.pigeonDeath, this);
 
     },
@@ -127,18 +138,13 @@ let Game = {
         }
 
         game.physics.arcade.collide(bird, weapon.bullets, (first, second) => {
-            first.kill();
             second.kill();
-            this.pigeonDeath();
+            loadingWidth -= 0.1 * 296;
         });
 
-        game.physics.arcade.collide(bird, cannonball.bullets, (first, second) => {
-            first.kill();
-            this.pigeonDeath();
-        });
+        game.physics.arcade.collide(bird, cannonball.bullets, (first, second) => loadingWidth = 0);
 
         game.physics.arcade.collide(weapon.bullets, cannonball.bullets, (weapon, cannonball) => weapon.kill());
-
 
         // if (spaceValue) {
         //  letter.body.gravity.y = 5000;
@@ -176,7 +182,6 @@ let Game = {
         }
 
         if (cursors.left.isDown) {
-            // bird.body.velocity.x = -150;
             spacefield.tilePosition.x -= -1;
             trees.tilePosition.x -= -1.5;
             for (let key in memory) {
@@ -185,13 +190,14 @@ let Game = {
         } 
 
         if (cursors.right.isDown) {
-            // bird.body.velocity.x = 150;
             spacefield.tilePosition.x -= 2;
             trees.tilePosition.x -= 3;
             bird.animations.getAnimation('fly').speed = 12;
             for (let key in memory) {
                 memory[key].setAll('body.velocity.x', -280);
             }
+
+            loadingWidth -= 0.01 * 296 / 60;
         } 
 
         if (cursors.space.isDown) {
@@ -201,12 +207,14 @@ let Game = {
         weapon.x = (Math.random() * 0.8 * 1200) + 0.2 * 1200;
         cannonball.x = (Math.random() * 0.7 * 1200) + 0.3 * 1200;
 
+        this.loadProgress();
+
     },
 
     pigeonDeath: function () {
+        bird.kill()
         startBtnSound.stop();
         game.state.start('GameOver');
-        score = 0;
     },
 
 
@@ -221,7 +229,7 @@ let Game = {
         second.kill();
         score += 10;
         scoreText.text = 'score: ' + score;
-
+        loadingWidth += 0.05 * 296;
     },
 
     addBulletsToCannonBall: function() {
@@ -244,6 +252,28 @@ let Game = {
         weapon.bulletAngleOffset = 160;
         weapon.fireFrom.setTo(0, game.world.height);
         weapon.autofire = true;
+    },
+
+    loadProgress() {
+        progress.clear();
+
+        progress.lineStyle(4, '0x00ff06');
+        progress.drawRoundedRect(game.world.width - 330, 30, 300, 30, 9);
+
+        progress.lineStyle(0);
+        progress.beginFill('0xf6ff00');
+        progress.drawRoundedRect(game.world.width - 328, 32, loadingWidth, 26, 9); 
+        progress.endFill();
+
+        loadingWidth -= 0.01 * 296 / 60;
+
+        if (loadingWidth > 296) {
+            loadingWidth = 296;
+        }          
+
+        if (loadingWidth < 0) {
+            this.pigeonDeath();
+        }
     }
 
     // render: function () {
